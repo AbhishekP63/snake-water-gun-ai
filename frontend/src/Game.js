@@ -43,7 +43,7 @@ export default function SnakeWaterGunGame() {
   const playMove = async (move) => {
     if (round > maxRounds) return;
     try {
-      const response = await axios.post("http://127.0.0.1:5000/move", { move });
+      const response = await axios.post("https://snake-water-gun-ai.onrender.com/", { move });
       const data = response.data;
 
       setUserMove(data.userMove);
