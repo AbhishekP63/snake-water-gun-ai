@@ -7,10 +7,11 @@ from sklearn.ensemble import RandomForestClassifier
 app = Flask(__name__)
 CORS(app)
 
+# ========== ML Model ==========
 model = RandomForestClassifier(n_estimators=100)
 is_trained = False
 
-#  Game Variables 
+# ========== Game Variables ==========
 move_mapping = {"s": 0, "w": 1, "g": 2}
 reverse_map = {0: "s", 1: "w", 2: "g"}
 actions = ["s", "w", "g"]
@@ -21,10 +22,12 @@ Q_table = {}
 user_score = 0
 comp_score = 0
 
-#  ML + Q-Learning Functions 
+# ========== AI/ML Functions ==========
+
 def train_model():
     global is_trained
     if len(history) < 6:
+        print("⏳ Not enough data to train ML model")
         return
     X, y = [], []
     for i in range(3, len(history)):
@@ -34,6 +37,7 @@ def train_model():
         y.append(target)
     model.fit(X, y)
     is_trained = True
+    print("✅ ML model trained with", len(X), "samples")
 
 def predict_next_move():
     if len(user_moves) < 3 or not is_trained:
@@ -41,15 +45,31 @@ def predict_next_move():
     try:
         seq = [move_mapping[user_moves[-i]] for i in range(3, 0, -1)]
         pred = model.predict([seq])[0]
+        print("🔮 ML Prediction:", reverse_map[pred])
         return reverse_map[pred]
     except Exception as e:
-        print("ML Prediction error:", e)
+        print("❌ ML Prediction Error:", e)
         return None
+
+def counter_move(user_move):
+    if user_move == "s": return "g"
+    if user_move == "w": return "s"
+    if user_move == "g": return "w"
+    return random.choice(actions)
+
+def behavioral_ai():
+    if not user_moves:
+        return random.choice(actions)
+    most_frequent = max(set(user_moves), key=user_moves.count)
+    print("🧠 Behavioral AI picked:", most_frequent)
+    return counter_move(most_frequent)
 
 def get_q_move(state):
     if state not in Q_table:
         Q_table[state] = {a: 0 for a in actions}
-    return max(Q_table[state], key=Q_table[state].get)
+    best = max(Q_table[state], key=Q_table[state].get)
+    print("📊 Q-learning chose:", best)
+    return best
 
 def update_q_table(state, action, reward):
     learning_rate = 0.4
@@ -60,24 +80,19 @@ def update_q_table(state, action, reward):
         reward + discount * max(Q_table[state].values()) - Q_table[state][action]
     )
 
-def counter_move(user_move):
-    if user_move == "s": return "g"
-    if user_move == "w": return "s"
-    if user_move == "g": return "w"
-    return random.choice(actions)
-
 def get_computer_move():
     state = "".join(user_moves[-3:]) if len(user_moves) >= 3 else ""
-    if not is_trained:
+
+    if not is_trained and len(history) >= 6:
         train_model()
 
-    ml_pred = predict_next_move()
-    if ml_pred:
-        return counter_move(ml_pred)
+    pred = predict_next_move()
+    if pred:
+        return counter_move(pred)
     elif state:
         return get_q_move(state)
     else:
-        return random.choice(actions)
+        return behavioral_ai()
 
 def determine_winner(user, comp):
     if user == comp:
@@ -86,7 +101,7 @@ def determine_winner(user, comp):
         return "User"
     return "Computer"
 
-#  API 
+# ========== API Route ==========
 @app.route('/move', methods=['POST'])
 def move():
     global user_score, comp_score
@@ -104,7 +119,11 @@ def move():
     update_q_table(state, comp_move, reward)
 
     user_moves.append(user_move)
-    history.append({"UserMove": user_move, "ComputerMove": comp_move, "Result": result})
+    history.append({
+        "UserMove": user_move,
+        "ComputerMove": comp_move,
+        "Result": result
+    })
 
     if result == "User":
         user_score += 1
@@ -119,6 +138,7 @@ def move():
         "compScore": comp_score
     })
 
+# ========== Run Server ==========
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, host="0.0.0.0", port=port)
