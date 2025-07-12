@@ -38,7 +38,8 @@ export default function SnakeWaterGunGame() {
   const [compScore, setCompScore] = useState(0);
   const [soundUrl, setSoundUrl] = useState(null);
   const [round, setRound] = useState(1);
-  const maxRounds = 10;
+  const [finalMessage, setFinalMessage] = useState("");
+  const maxRounds = 15;
 
   const playMove = async (move) => {
     if (round > maxRounds) return;
@@ -49,6 +50,7 @@ export default function SnakeWaterGunGame() {
       setUserMove(data.userMove);
       setCompMove(data.compMove);
       setResult(results[data.result]);
+      setFinalMessage(data.finalMessage || "");
 
       if (data.result === "User") setUserScore(prev => prev + 1);
       else if (data.result === "Computer") setCompScore(prev => prev + 1);
@@ -111,9 +113,16 @@ export default function SnakeWaterGunGame() {
       <p className="mt-4 text-xl">Score: You {userScore} - {compScore} Computer</p>
 
       {round > maxRounds && (
-        <div className="mt-4 text-yellow-300 font-semibold">
-          🎯 Game Over! Refresh to play again.
-        </div>
+        <>
+          <div className="mt-4 text-yellow-300 font-semibold">
+            🎯 Game Over! Refresh to play again.
+          </div>
+          {finalMessage && (
+            <p className="text-2xl font-bold mt-2 text-green-400">
+              {finalMessage}
+            </p>
+          )}
+        </>
       )}
     </div>
   );
