@@ -7,19 +7,22 @@ from sklearn.ensemble import RandomForestClassifier
 app = Flask(__name__)
 CORS(app)
 
-# ============ Variables =============
 model = RandomForestClassifier(n_estimators=100)
 is_trained = False
+
+# === Constants ===
+move_mapping = {"s": 0, "w": 1, "g": 2}
+reverse_map = {0: "s", 1: "w", 2: "g"}
+actions = ["s", "w", "g"]
+
+# === Game State ===
 history = []
 user_moves = []
 Q_table = {}
 user_score = 0
 comp_score = 0
-actions = ["s", "w", "g"]
-move_mapping = {"s": 0, "w": 1, "g": 2}
-reverse_map = {0: "s", 1: "w", 2: "g"}
 
-# ============ Helpers =============
+# === ML Training ===
 def train_model():
     global is_trained
     if len(history) < 6:
@@ -33,6 +36,7 @@ def train_model():
         model.fit(X, y)
         is_trained = True
 
+# === Prediction & Counter ===
 def predict_next_move():
     if len(user_moves) < 3 or not is_trained:
         return None
@@ -47,7 +51,13 @@ def counter_move(move):
     if move == "s": return "g"
     if move == "w": return "s"
     if move == "g": return "w"
-    return random.choice(actions)  # fallback truly random
+    return random.choice(actions)
+
+# === Q-learning ===
+def get_q_move(state):
+    if state not in Q_table:
+        Q_table[state] = {a: 0 for a in actions}
+    return max(Q_table[state], key=Q_table[state].get)
 
 def update_q_table(state, action, reward):
     learning_rate = 0.3
@@ -58,11 +68,7 @@ def update_q_table(state, action, reward):
         reward + discount * max(Q_table[state].values()) - Q_table[state][action]
     )
 
-def get_q_move(state):
-    if state in Q_table:
-        return max(Q_table[state], key=Q_table[state].get)
-    return None
-
+# === Game Logic ===
 def determine_winner(user, comp):
     if user == comp:
         return "Draw"
@@ -70,34 +76,32 @@ def determine_winner(user, comp):
         return "User"
     return "Computer"
 
-# ============ Decision Logic =============
 def get_computer_move():
     state = "".join(user_moves[-3:]) if len(user_moves) >= 3 else ""
+    round_no = len(history) + 1
+
+    if round_no <= 3:
+        return random.choice(actions)  # First 3 rounds: randomness
 
     if not is_trained and len(history) >= 6:
         train_model()
 
-    # ML Prediction
-    ml_move = predict_next_move()
-    if ml_move:
-        return counter_move(ml_move)
+    predicted = predict_next_move()
+    if predicted:
+        return counter_move(predicted)
+    elif state:
+        return get_q_move(state)
+    else:
+        return random.choice(actions)  # Fallback to randomness
 
-    # Q-Learning Fallback
-    if state:
-        q_choice = get_q_move(state)
-        if q_choice:
-            return q_choice
-
-    # Final fallback → fair random
-    return random.choice(actions)
-
-# ============ API ============
+# === API Route ===
 @app.route('/move', methods=['POST'])
 def move():
     global user_score, comp_score
 
     data = request.get_json()
     user_move = data.get("move")
+
     if user_move not in move_mapping:
         return jsonify({"error": "Invalid move"}), 400
 
