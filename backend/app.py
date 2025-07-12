@@ -117,7 +117,7 @@ def move():
         comp_score += 1
 
     final_result = ""
-    if round_no == total_rounds:
+    if round_no == 15:
         if user_score > comp_score:
             final_result = "🏆 You are the overall winner!"
         elif comp_score > user_score:
