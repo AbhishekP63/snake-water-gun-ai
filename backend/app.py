@@ -1,7 +1,7 @@
 import os
-import random
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import random
 from sklearn.ensemble import RandomForestClassifier
 
 app = Flask(__name__)
@@ -10,7 +10,7 @@ CORS(app)
 model = RandomForestClassifier(n_estimators=100)
 is_trained = False
 
-#  Game State 
+# === Constants and Variables ===
 move_mapping = {"s": 0, "w": 1, "g": 2}
 reverse_map = {0: "s", 1: "w", 2: "g"}
 actions = ["s", "w", "g"]
@@ -20,21 +20,20 @@ Q_table = {}
 user_score = 0
 comp_score = 0
 
-#  Train ML Model 
+# === ML Training ===
 def train_model():
     global is_trained
     if len(history) < 6:
         return
     X, y = [], []
     for i in range(3, len(history)):
-        seq = [move_mapping[history[j]["UserMove"]] for j in range(i - 3, i)]
-        X.append(seq)
+        X.append([move_mapping[history[j]["UserMove"]] for j in range(i - 3, i)])
         y.append(move_mapping[history[i]["UserMove"]])
     if X and y:
         model.fit(X, y)
         is_trained = True
 
-#  Predict + Counter Logic 
+# === Predict + Counter ===
 def predict_next_move():
     if len(user_moves) < 3 or not is_trained:
         return None
@@ -51,7 +50,7 @@ def counter_move(move):
     if move == "g": return "w"
     return random.choice(actions)
 
-#  Q-Learning 
+# === Q-learning (optional fallback) ===
 def get_q_move(state):
     if state not in Q_table:
         Q_table[state] = {a: 0 for a in actions}
@@ -66,42 +65,46 @@ def update_q_table(state, action, reward):
         reward + discount * max(Q_table[state].values()) - Q_table[state][action]
     )
 
-#  Game Logic 
+# === Game Logic ===
 def determine_winner(user, comp):
     if user == comp:
         return "Draw"
-    elif (user == "s" and comp == "w") or (user == "w" and comp == "g") or (user == "g" and comp == "s"):
+    if (user == "s" and comp == "w") or (user == "w" and comp == "g") or (user == "g" and comp == "s"):
         return "User"
     return "Computer"
 
-def get_computer_move(round_no):
-    # 🔁 First 3 rounds: random
+def get_computer_move():
+    round_no = len(user_moves) + 1
+    state = "".join(user_moves[-3:]) if len(user_moves) >= 3 else ""
+
+    # First 3 rounds → random move
     if round_no <= 3:
         return random.choice(actions)
 
-    # 🧠 Train if not done
+    # Train if not already
     if not is_trained and len(history) >= 6:
         train_model()
 
-    # 🔮 Try predicting
+    # Try prediction
     predicted = predict_next_move()
     if predicted:
         return counter_move(predicted)
-    else:
-        return random.choice(actions)  # ✅ Fallback must be random, NOT fixed
 
-#  API 
+    # Fallback to random (instead of default "Gun")
+    return random.choice(actions)
+
+# === API Route ===
 @app.route('/move', methods=['POST'])
 def move():
     global user_score, comp_score
 
     data = request.get_json()
     user_move = data.get("move")
+
     if user_move not in move_mapping:
         return jsonify({"error": "Invalid move"}), 400
 
-    round_no = len(history) + 1
-    comp_move = get_computer_move(round_no)
+    comp_move = get_computer_move()
     result = determine_winner(user_move, comp_move)
 
     reward = 1 if result == "User" else -1 if result == "Computer" else 0
@@ -110,7 +113,6 @@ def move():
 
     user_moves.append(user_move)
     history.append({
-        "Round": round_no,
         "UserMove": user_move,
         "ComputerMove": comp_move,
         "Result": result
@@ -129,7 +131,7 @@ def move():
         "compScore": comp_score
     })
 
-#  Run Server 
+# === Entry Point ===
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, host="0.0.0.0", port=port)
