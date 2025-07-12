@@ -63,11 +63,12 @@ export default function SnakeWaterGunGame() {
   };
 
   return (
-    <div className="flex flex-col items-center p-4 gap-4 min-h-screen bg-gradient-to-br from-indigo-900 to-black text-white">
-      <h1 className="text-4xl font-bold tracking-wide mb-2">🐍 Snake - Water - Gun</h1>
+    <div className="flex flex-col items-center justify-center px-4 py-6 gap-4 min-h-screen bg-gradient-to-br from-indigo-900 to-black text-white">
+      <h1 className="text-4xl font-bold tracking-wide text-center">🐍 Snake - Water - Gun</h1>
       <p className="text-lg text-gray-300">Round {Math.min(round, maxRounds)} / {maxRounds}</p>
 
-      <div className="flex gap-6 mt-4">
+      {/* Buttons */}
+      <div className="flex flex-wrap justify-center gap-4 mt-4 w-full max-w-md">
         {Object.entries(moves).map(([key, val]) => (
           <button
             key={key}
@@ -82,23 +83,35 @@ export default function SnakeWaterGunGame() {
 
       {soundUrl && <Howler src={soundUrl} playing={true} volume={0.8} />}
 
-      <div className="flex mt-10 gap-10 items-center">
+      {/* Animations */}
+      <div className="flex flex-col sm:flex-row gap-10 mt-10 items-center justify-center w-full">
         {userMove && (
           <div className="text-center">
             <p className="text-xl font-semibold mb-1">🧑 You</p>
-            <Player autoplay loop src={moves[userMove].animation} style={{ height: 120, width: 120 }} />
+            <Player
+              autoplay
+              loop
+              src={moves[userMove].animation}
+              className="w-32 sm:w-40 mx-auto"
+            />
             <p className="text-lg">{moves[userMove].name}</p>
           </div>
         )}
         {compMove && (
           <div className="text-center">
             <p className="text-xl font-semibold mb-1">🤖 Computer</p>
-            <Player autoplay loop src={moves[compMove].animation} style={{ height: 120, width: 120 }} />
+            <Player
+              autoplay
+              loop
+              src={moves[compMove].animation}
+              className="w-32 sm:w-40 mx-auto"
+            />
             <p className="text-lg">{moves[compMove].name}</p>
           </div>
         )}
       </div>
 
+      {/* Result */}
       {result && (
         <motion.p
           className="text-2xl mt-6 font-bold"
@@ -110,15 +123,17 @@ export default function SnakeWaterGunGame() {
         </motion.p>
       )}
 
+      {/* Score */}
       <p className="mt-4 text-xl">Score: You {userScore} - {compScore} Computer</p>
 
+      {/* Game Over */}
       {round > maxRounds && (
         <>
-          <div className="mt-4 text-yellow-300 font-semibold">
+          <div className="mt-4 text-yellow-300 font-semibold text-center">
             🎯 Game Over! Refresh to play again.
           </div>
           {finalMessage && (
-            <p className="text-2xl font-bold mt-2 text-green-400">
+            <p className="text-2xl font-bold mt-2 text-green-400 text-center">
               {finalMessage}
             </p>
           )}
