@@ -43,6 +43,7 @@ export default function SnakeWaterGunGame() {
 
   const playMove = async (move) => {
     if (round > maxRounds) return;
+
     try {
       const response = await axios.post("https://snake-water-gun-ai.onrender.com/move", { move });
       const data = response.data;
@@ -60,6 +61,17 @@ export default function SnakeWaterGunGame() {
     } catch (err) {
       console.error("❌ Backend Error:", err);
     }
+  };
+
+  const resetGame = () => {
+    setUserMove(null);
+    setCompMove(null);
+    setResult("");
+    setUserScore(0);
+    setCompScore(0);
+    setSoundUrl(null);
+    setRound(1);
+    setFinalMessage("");
   };
 
   return (
@@ -129,14 +141,34 @@ export default function SnakeWaterGunGame() {
       {/* Game Over */}
       {round > maxRounds && (
         <>
-          <div className="mt-4 text-yellow-300 font-semibold text-center">
-            🎯 Game Over! Refresh to play again.
-          </div>
+          <motion.div
+            className="mt-6 text-yellow-300 font-semibold text-center text-xl"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            🎯 Game Over!
+          </motion.div>
+
           {finalMessage && (
-            <p className="text-2xl font-bold mt-2 text-green-400 text-center">
+            <motion.p
+              className="text-2xl font-bold mt-2 text-green-400 text-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
               {finalMessage}
-            </p>
+            </motion.p>
           )}
+
+          {/* Play Again Button */}
+          <motion.button
+            onClick={resetGame}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            className="mt-6 px-6 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-2xl shadow-xl"
+          >
+            🔁 Play Again
+          </motion.button>
         </>
       )}
     </div>
