@@ -10,10 +10,9 @@ CORS(app)
 model = RandomForestClassifier(n_estimators=100)
 is_trained = False
 
-# === Constants and State ===
+# === Game Variables ===
 move_mapping = {"s": 0, "w": 1, "g": 2}
 reverse_map = {0: "s", 1: "w", 2: "g"}
-reverse_name = {"s": "Snake", "w": "Water", "g": "Gun"}
 actions = ["s", "w", "g"]
 
 history = []
@@ -23,7 +22,7 @@ user_score = 0
 comp_score = 0
 total_rounds = 15
 
-# === ML Training ===
+# === ML Functions ===
 def train_model():
     global is_trained
     if len(history) < 6:
@@ -36,7 +35,6 @@ def train_model():
         model.fit(X, y)
         is_trained = True
 
-# === Prediction Logic ===
 def predict_next_move():
     if len(user_moves) < 3 or not is_trained:
         return None
@@ -47,13 +45,13 @@ def predict_next_move():
     except:
         return None
 
+# === Game Strategy ===
 def counter_move(move):
     if move == "s": return "g"
     if move == "w": return "s"
     if move == "g": return "w"
     return random.choice(actions)
 
-# === Q-Learning ===
 def get_q_move(state):
     if state not in Q_table:
         Q_table[state] = {a: 0 for a in actions}
@@ -68,7 +66,6 @@ def update_q_table(state, action, reward):
         reward + discount * max(Q_table[state].values()) - Q_table[state][action]
     )
 
-# === Winner Logic ===
 def determine_winner(user, comp):
     if user == comp:
         return "Draw"
@@ -76,48 +73,43 @@ def determine_winner(user, comp):
         return "User"
     return "Computer"
 
-def get_computer_move():
+def get_computer_move(round_no):
     state = "".join(user_moves[-3:]) if len(user_moves) >= 3 else ""
-    
+
     if not is_trained and len(history) >= 6:
         train_model()
 
-    pred = predict_next_move()
-    if pred:
-        return counter_move(pred)
+    if round_no <= 3:
+        return random.choice(actions)
+
+    predicted = predict_next_move()
+    if predicted:
+        return counter_move(predicted)
     elif state:
         return get_q_move(state)
     else:
         return random.choice(actions)
 
-# === API Endpoint ===
+# === API Route ===
 @app.route('/move', methods=['POST'])
 def move():
     global user_score, comp_score
 
     data = request.get_json()
     user_move = data.get("move")
-
     if user_move not in move_mapping:
         return jsonify({"error": "Invalid move"}), 400
 
     round_no = len(history) + 1
-    comp_move = get_computer_move()
+    comp_move = get_computer_move(round_no)
     result = determine_winner(user_move, comp_move)
 
-    # Update rewards
     reward = 1 if result == "User" else -1 if result == "Computer" else 0
     state = "".join(user_moves[-3:]) if len(user_moves) >= 3 else ""
     update_q_table(state, comp_move, reward)
 
-    # Log moves
     user_moves.append(user_move)
-    history.append({
-        "Round": round_no,
-        "UserMove": user_move,
-        "ComputerMove": comp_move,
-        "Result": result
-    })
+    history.append({"UserMove": user_move, "ComputerMove": comp_move, "Result": result})
 
     if result == "User":
         user_score += 1
@@ -127,9 +119,9 @@ def move():
     final_result = ""
     if round_no == total_rounds:
         if user_score > comp_score:
-            final_result = "🏆 User is the overall winner!"
+            final_result = "🏆 You are the overall winner!"
         elif comp_score > user_score:
-            final_result = "🤖 Computer dominates this game!"
+            final_result = "🤖 Computer dominates the game!"
         else:
             final_result = "🤝 It's a tie after 15 rounds!"
 
