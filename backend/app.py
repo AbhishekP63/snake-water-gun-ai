@@ -47,9 +47,9 @@ def predict_next_move():
 
 # === Game Strategy ===
 def counter_move(move):
-    if move == "s": return "g"
-    if move == "w": return "s"
-    if move == "g": return "w"
+    if move == "s": return "g"  # Gun beats Snake
+    if move == "w": return "s"  # Snake drinks Water
+    if move == "g": return "w"  # Water douses Gun
     return random.choice(actions)
 
 def get_q_move(state):
@@ -104,7 +104,8 @@ def move():
     comp_move = get_computer_move(round_no)
     result = determine_winner(user_move, comp_move)
 
-    reward = 1 if result == "User" else -1 if result == "Computer" else 0
+    # ✅ Fix: Reward is now from the computer's perspective
+    reward = 1 if result == "Computer" else -1 if result == "User" else 0
     state = "".join(user_moves[-3:]) if len(user_moves) >= 3 else ""
     update_q_table(state, comp_move, reward)
 
@@ -117,13 +118,16 @@ def move():
         comp_score += 1
 
     final_result = ""
-    if round_no == 15:
+    if round_no == total_rounds:
         if user_score > comp_score:
             final_result = "🏆 You are the overall winner!"
         elif comp_score > user_score:
             final_result = "🤖 Computer dominates the game!"
         else:
             final_result = "🤝 It's a tie after 15 rounds!"
+
+    # ✅ Debug Log (prints server-side only)
+    print(f"[Round {round_no}] User: {user_move}, Comp: {comp_move}, Predicted: {predict_next_move()}, Result: {result}, Reward: {reward}")
 
     return jsonify({
         "userMove": user_move,
